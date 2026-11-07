@@ -402,14 +402,14 @@ async function detectNetwork() {
 async function ensureCnNetworkBeforeAction({ button, statusEl, idleHtml }) {
 	if (state.networkChecking) return false;
 	if (button) button.innerHTML = `${svgPulseIcon()}网络验证`;
-	if (statusEl) statusEl.textContent = "正在检测CN网络";
+	if (statusEl) statusEl.textContent = "正在检测 CN/HK 网络";
 	const allowed = await refreshCnNetwork({ resetResults: false, stopRuns: false });
 	if (!allowed) {
 		if (button && idleHtml) button.innerHTML = idleHtml;
-		if (statusEl) statusEl.textContent = "检测未通过，请关闭代理后重试";
+		if (statusEl) statusEl.textContent = "检测未通过，请检查网络出口后重试";
 		return false;
 	}
-	if (statusEl) statusEl.textContent = "CN网络检测通过";
+	if (statusEl) statusEl.textContent = "CN/HK 网络检测通过";
 	return true;
 }
 
@@ -500,8 +500,8 @@ if (nonCn.length) {
 	return {
 		kind: "non-cn",
 		heading: "红牌警告",
-		title: "检测到当前网络出口不是 CN 直连",
-		message: "请确认浏览器当前网络是否经过了 代理、VPN 或 境外网络，\n在线优选仅有 CN 直连网络环境才可以实现！\n当前网络环境无法进行在线优选，可尝试使用「本地优选」。",
+		title: "检测到当前网络出口不是 CN 或 HK",
+		message: "在线优选仅支持 CN（中国大陆）或 HK（香港）网络出口。\n请检查浏览器当前网络出口及代理、VPN 设置，\n当前网络环境无法进行在线优选，可尝试使用「本地优选」。",
 		rows: nonCn,
 		details: completed
 	};
@@ -792,9 +792,13 @@ async function fetchWithAutoMirror(originalUrl, description = "资源") {
 	}
 }
 
+function isSupportedCountry(country) {
+	return ["CN", "HK"].includes(String(country || "").toUpperCase());
+}
+
 async function detectStack(family, host) {
 	const { endpoint, data } = await fetchJsonFromFastestEndpoint(buildDetectEndpoints(family, host), "ip.json", 6500);
-	const allowed = data.country === "CN";
+	const allowed = isSupportedCountry(data.country);
 	return {
 		status: "done",
 		allowed,
@@ -861,9 +865,9 @@ function renderNetworkCard(family, info) {
 		card.classList.add("is-hidden");
 		card.classList.add("is-unavailable");
 		value.textContent = "不可用";
-		if (note) note.textContent = "非CN网络";
+		if (note) note.textContent = "不支持的网络";
 		tag.className = "tag bad";
-		tag.textContent = info.country || "非CN";
+		tag.textContent = info.country || "未知";
 		return;
 	}
 
@@ -1139,7 +1143,7 @@ function parseCfTrace(text) {
 function isQualifiedTraceDomain(trace, requestedHost) {
 	if (String(trace.h || "").toLowerCase() !== String(requestedHost).toLowerCase()) return false;
 	if (trace.ip !== state.ipv4 && trace.ip !== state.ipv6) return false;
-	if (String(trace.loc || "").toUpperCase() !== "CN") return false;
+	if (!isSupportedCountry(trace.loc)) return false;
 	return true;
 }
 
