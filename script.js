@@ -1062,6 +1062,7 @@ async function testLatency(address, timeout, run) {
 		}
 	}
 	if (!trace) throw lastError || new Error("参数获取失败");
+	if (String(trace.colo || "").toUpperCase() === "HKG") return null;
 
 	// 阶段二：参数就绪后依次发起 3 次 GET 测速（串行执行，避免并发争抢带宽干扰样本），取最小值作为延迟
 	const samples = [];
